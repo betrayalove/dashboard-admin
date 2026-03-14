@@ -1,0 +1,89 @@
+/* Цвета синхронизированы с src/shared/styles/tokens.ts */
+:root {
+  --color-primary: #2563EB;
+  --color-secondary: #7C3AED;
+  --color-bg-light: #FFFFFF;
+  --color-bg-dark: #020617;
+  --color-surface-light: #FFFFFF;
+  --color-surface-dark: #020617;
+  --color-success: #16A34A;
+  --color-error: #DC2626;
+  --color-text: #0F172A;
+  --color-text-inverse: #E2E8F0;
+  --color-text-secondary: #7C3AED;
+  --font-family: Inter, system-ui, sans-serif;
+  --font-size-h1: clamp(1.5rem, 2.5vw, 1.75rem);
+  --font-size-h2: clamp(1.2rem, 2vw, 1.35rem);
+  --font-size-body: clamp(0.9375rem, 1vw, 1rem);
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 48px;
+  --radius-card: 8px;
+  --radius-btn: 6px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --container-max: 1280px;
+  --breakpoint-sm: 360px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}
+
+[data-theme='dark'] {
+  --color-bg: var(--color-bg-dark);
+  --color-surface: var(--color-surface-dark);
+  --color-text: var(--color-text-inverse);
+  --color-text-secondary: #94a3b8;
+}
+
+:root:not([data-theme='dark']) {
+  --color-bg: var(--color-bg-light);
+  --color-surface: var(--color-surface-light);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: 700;
+  margin: 0 0 var(--space-2);
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}

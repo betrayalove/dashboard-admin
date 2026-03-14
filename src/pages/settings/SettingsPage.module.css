@@ -1,0 +1,46 @@
+.page {
+  padding: 0;
+}
+
+.title {
+  margin-bottom: var(--space-4);
+}
+
+.card {
+  max-width: 480px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.select {
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--color-secondary);
+  background: var(--color-surface);
+  color: var(--color-text);
+  width: 100%;
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
