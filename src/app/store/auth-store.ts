@@ -19,7 +19,7 @@ interface AuthState {
   initFromStorage: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
   loading: false,
