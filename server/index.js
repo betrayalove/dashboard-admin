@@ -26,14 +26,9 @@ app.use('/api/users', authMiddleware(JWT_SECRET), usersRouter);
 
 const httpServer = createServer(app);
 
+const WS_PATH = '/ws';
 let wss = null;
-const wssServer = new WebSocketServer({ port: WS_PORT });
-wssServer.on('error', (err) => {
-  console.warn(`WebSocket: port ${WS_PORT} unavailable (${err.message}). Use WS_PORT=... to change. REST API is running.`);
-});
-wssServer.on('listening', () => {
-  wss = wssServer;
-});
+const wssServer = new WebSocketServer({ noServer: true });
 
 wssServer.on('connection', (ws, req) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -56,6 +51,17 @@ wssServer.on('connection', (ws, req) => {
     } catch {}
   });
 });
+
+httpServer.on('upgrade', (req, socket, head) => {
+  if (req.url?.startsWith(WS_PATH)) {
+    wssServer.handleUpgrade(req, socket, head, (ws) => {
+      wssServer.emit('connection', ws, req);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+wss = wssServer;
 
 function broadcastStatsUpdate(payload) {
   (wss || wssServer).clients.forEach((client) => {
@@ -88,5 +94,5 @@ httpServer.on('error', (err) => {
 
 httpServer.listen(PORT, () => {
   console.log(`REST API: http://localhost:${PORT}`);
-  console.log(`WebSocket: ws://localhost:${WS_PORT}`);
+  console.log(`WebSocket: ws://localhost:${PORT}${WS_PATH}`);
 });

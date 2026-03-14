@@ -1,5 +1,5 @@
 const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.DEV) ? 'http://localhost:3081/api' : '/api';
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || ((typeof import.meta !== 'undefined' && import.meta.env?.DEV) ? 'http://localhost:3081/api' : '/api');
 
 export type ApiError = { error: string };
 

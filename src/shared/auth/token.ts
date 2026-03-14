@@ -1,7 +1,6 @@
 const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.DEV)
-    ? 'http://localhost:3081/api'
-    : '/api';
+  (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE) ||
+  ((typeof import.meta !== 'undefined' && import.meta.env?.DEV) ? 'http://localhost:3081/api' : '/api');
 
 export interface AuthMeResponse {
   user: { id: number; login: string; name: string; role: string };
