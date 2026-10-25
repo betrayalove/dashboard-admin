@@ -35,3 +35,28 @@ test.describe('Авторизация', () => {
     await expect(page.getByRole('heading', { name: /дашборд/i })).toBeVisible({ timeout: 5000 });
   });
 });
+
+test('сессия сохраняет вложенный маршрут при медленном /me', async ({ page }) => {
+  await page.goto('/users?sort=name#table');
+  await page.getByTestId('login-input').fill('admin');
+  await page.getByTestId('password-input').fill('admin');
+  await page.getByTestId('login-submit').click();
+  await expect(page).toHaveURL(/\/users\?sort=name#table$/);
+  await page.route('**/api/auth/me', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.continue();
+  });
+  await page.reload();
+  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page).toHaveURL(/\/users\?sort=name#table$/);
+});
+
+test('WebSocket принимает сообщение через единый /ws', async ({ page }) => {
+  const messages: string[] = [];
+  page.on('websocket', (socket) => socket.on('framereceived', ({ payload }) => messages.push(String(payload))));
+  await page.goto('/login');
+  await page.getByTestId('login-input').fill('admin');
+  await page.getByTestId('password-input').fill('admin');
+  await page.getByTestId('login-submit').click();
+  await expect.poll(() => messages.some((message) => JSON.parse(message).type === 'stats-update')).toBe(true);
+});

@@ -1,6 +1,7 @@
 import express from 'express';
-import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import { createServer } from 'node:http';
+import { pathToFileURL } from 'node:url';
+import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
@@ -9,90 +10,51 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { usersRouter } from './routes/users.js';
 import { authMiddleware } from './middleware/auth.js';
 import { getStats } from './data/stats.js';
+import { JWT_SECRET, USER_PROFILE, allowedOrigins } from './config.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dashboard-secret-key-change-in-production';
-const PORT = process.env.PORT || 3081;
-const WS_PORT = process.env.WS_PORT || 3082;
-
-const app = express();
-app.use(cors({ origin: true, credentials: true }));
-app.use(cookieParser());
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-
-app.use('/api/auth', authRouter);
-app.use('/api/dashboard', authMiddleware(JWT_SECRET), dashboardRouter);
-app.use('/api/users', authMiddleware(JWT_SECRET), usersRouter);
-
-const httpServer = createServer(app);
-
-const WS_PATH = '/ws';
-let wss = null;
-const wssServer = new WebSocketServer({ noServer: true });
-
-wssServer.on('connection', (ws, req) => {
-  const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const token = url.searchParams.get('token');
-  if (!token) {
-    ws.close(4001, 'Missing token');
-    return;
-  }
-  try {
-    jwt.verify(token, JWT_SECRET);
-  } catch {
-    ws.close(4002, 'Invalid token');
-    return;
-  }
-
-  ws.on('message', (data) => {
+export function createDashboardServer() {
+  const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+  app.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  app.use((req, res, next) => {
+    if (req.headers.origin && !allowedOrigins.includes(req.headers.origin)) return res.status(403).json({ error: 'Origin not allowed' });
+    next();
+  });
+  app.use(cors({ origin: allowedOrigins, credentials: true }));
+  app.use(cookieParser());
+  app.use(express.json({ limit: '16kb' }));
+  app.get('/health', (_req, res) => res.json({ ok: true }));
+  app.use('/api/auth', authRouter);
+  app.use('/api/dashboard', authMiddleware, dashboardRouter);
+  app.use('/api/users', authMiddleware, usersRouter);
+  app.use((err, _req, res, _next) => res.status(err.status || 500).json({ error: err.status === 400 ? 'Invalid request' : 'Server error' }));
+  const httpServer = createServer(app);
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 16384 });
+  const usedTickets = new Map();
+  httpServer.on('upgrade', (req, socket, head) => {
     try {
-      const msg = JSON.parse(data.toString());
-      if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
-    } catch {}
+      const url = new URL(req.url, 'http://localhost');
+      if (url.pathname !== '/ws' || (req.headers.origin && !allowedOrigins.includes(req.headers.origin))) throw new Error('Unauthorized');
+      const payload = jwt.verify(url.searchParams.get('ticket'), JWT_SECRET, { algorithms: ['HS256'] });
+      for (const [id, expires] of usedTickets) if (expires < Date.now() / 1000) usedTickets.delete(id);
+      if (payload.purpose !== 'ws' || payload.sub !== String(USER_PROFILE.id) || !payload.jti || usedTickets.has(payload.jti)) throw new Error('Unauthorized');
+      usedTickets.set(payload.jti, payload.exp);
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws));
+    } catch { socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n'); }
   });
-});
-
-httpServer.on('upgrade', (req, socket, head) => {
-  if (req.url?.startsWith(WS_PATH)) {
-    wssServer.handleUpgrade(req, socket, head, (ws) => {
-      wssServer.emit('connection', ws, req);
+  wss.on('connection', (ws) => {
+    ws.send(JSON.stringify({ type: 'stats-update', payload: getStats() }));
+    ws.on('message', (data) => {
+      try { if (JSON.parse(data.toString()).type === 'ping') ws.send(JSON.stringify({ type: 'pong' })); } catch { /* Ignore malformed client messages. */ }
     });
-  } else {
-    socket.destroy();
-  }
-});
-wss = wssServer;
-
-function broadcastStatsUpdate(payload) {
-  (wss || wssServer).clients.forEach((client) => {
-    if (client.readyState === 1) client.send(JSON.stringify({ type: 'stats-update', payload }));
   });
+  const broadcast = (data) => wss.clients.forEach((client) => { if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(data)); });
+  const timers = [setInterval(() => broadcast({ type: 'stats-update', payload: getStats() }), 15000), setInterval(() => broadcast({ type: 'notification', message: 'Данные синхронизированы' }), 25000)];
+  httpServer.on('close', () => timers.forEach(clearInterval));
+  return { httpServer, wss };
 }
-
-function broadcastNotification(message) {
-  (wss || wssServer).clients.forEach((client) => {
-    if (client.readyState === 1) client.send(JSON.stringify({ type: 'notification', message }));
-  });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { httpServer } = createDashboardServer();
+  httpServer.listen(Number(process.env.PORT || 3081), () => console.log(`Dashboard API and WebSocket listening on ${httpServer.address().port}`));
 }
-
-export { broadcastStatsUpdate, broadcastNotification };
-
-setInterval(() => broadcastStatsUpdate(getStats()), 15000);
-setInterval(() => {
-  const messages = ['Новые данные синхронизированы', 'Система обновлена', 'Проверьте отчёты'];
-  broadcastNotification(messages[Math.floor(Math.random() * messages.length)]);
-}, 25000);
-
-httpServer.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Use PORT=... and WS_PORT=... to change (e.g. PORT=3091 WS_PORT=3092 npm run start).`);
-  } else {
-    console.error(err);
-  }
-  process.exit(1);
-});
-
-httpServer.listen(PORT, () => {
-  console.log(`REST API: http://localhost:${PORT}`);
-  console.log(`WebSocket: ws://localhost:${PORT}${WS_PATH}`);
-});

@@ -1,49 +1,27 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
+import { rateLimit } from 'express-rate-limit';
 import { authMiddleware } from '../middleware/auth.js';
+import { AUTH_COOKIE, JWT_SECRET, USER_PROFILE, cookieOptions } from '../config.js';
 
 export const authRouter = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dashboard-secret-key-change-in-production';
-const JWT_EXPIRES = '24h';
-const AUTH_COOKIE = 'auth_token';
-const isProduction = process.env.NODE_ENV === 'production';
-
-const DEMO_USER = { login: 'admin', password: 'admin' };
-const USER_PROFILE = { id: 1, login: 'admin', name: 'Администратор', role: 'admin' };
-
-function setAuthCookie(res, token) {
-  res.cookie(AUTH_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    path: '/',
-    secure: isProduction,
-    maxAge: 24 * 60 * 60 * 1000,
-  });
-}
-
-authRouter.post('/login', (req, res) => {
-  const body = req.body;
-  const login = body?.login ?? (typeof body?.username === 'string' ? body.username : undefined);
-  const password = body?.password;
-  if (!login || !password) {
-    return res.status(400).json({
-      error: 'Login and password required',
-      debug: process.env.NODE_ENV !== 'production' ? { hasBody: !!body, keys: body ? Object.keys(body) : [] } : undefined,
-    });
+authRouter.post('/login', rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false }), (req, res) => {
+  const { login, password } = req.body || {};
+  if (typeof login !== 'string' || typeof password !== 'string' || !login.trim() || !password || login.length > 100 || password.length > 200) {
+    return res.status(400).json({ error: 'Login and password must be non-empty strings' });
   }
-  if (login !== DEMO_USER.login || password !== DEMO_USER.password) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-  const token = jwt.sign({ sub: USER_PROFILE.id, login }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-  setAuthCookie(res, token);
-  return res.json({ token, user: USER_PROFILE });
+  if (login !== 'admin' || password !== 'admin') return res.status(401).json({ error: 'Invalid credentials' });
+  const token = jwt.sign({ sub: String(USER_PROFILE.id), purpose: 'session' }, JWT_SECRET, { expiresIn: '24h' });
+  res.cookie(AUTH_COOKIE, token, { ...cookieOptions, maxAge: 86400000 });
+  res.json({ user: USER_PROFILE });
 });
-
-authRouter.post('/logout', (req, res) => {
-  res.cookie(AUTH_COOKIE, '', { httpOnly: true, sameSite: 'strict', path: '/', maxAge: 0 });
+authRouter.post('/logout', (_req, res) => {
+  res.clearCookie(AUTH_COOKIE, cookieOptions);
   res.json({ ok: true });
 });
-
-authRouter.get('/me', authMiddleware(JWT_SECRET), (req, res) => {
-  res.json({ user: USER_PROFILE, token: req.token });
+authRouter.get('/me', authMiddleware, (_req, res) => res.json({ user: USER_PROFILE }));
+authRouter.post('/ws-ticket', authMiddleware, (_req, res) => {
+  const ticket = jwt.sign({ sub: String(USER_PROFILE.id), purpose: 'ws', jti: randomUUID() }, JWT_SECRET, { expiresIn: '60s' });
+  res.json({ ticket });
 });

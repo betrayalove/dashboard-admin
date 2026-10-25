@@ -35,7 +35,7 @@ interface UsersState {
   toggleOrder: () => void;
   toggleSelect: (id: number) => void;
   toggleSelectAll: () => void;
-  removeSelected: () => void;
+  removeSelected: () => Promise<number>;
   clearError: () => void;
 }
 
@@ -51,13 +51,12 @@ export const useUsersStore = create<UsersState>((set, get) => ({
   error: null,
 
   fetchUsers: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!useAuthStore.getState().user) return;
     set({ loading: true, error: null });
     try {
       const { page, limit, sort, order } = get();
       const q = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
-      const data = await apiFetch<UsersResponse>(`/users?${q}`, { token });
+      const data = await apiFetch<UsersResponse>(`/users?${q}`);
       set({
         items: data.items,
         total: data.total,
@@ -66,6 +65,7 @@ export const useUsersStore = create<UsersState>((set, get) => ({
         sort: data.sort,
         order: data.order,
         loading: false,
+        selectedIds: get().selectedIds.filter((id) => data.items.some((u) => u.id === id)),
         error: null,
       });
     } catch (e) {
@@ -75,7 +75,7 @@ export const useUsersStore = create<UsersState>((set, get) => ({
         error: isUnauthorized ? null : (e instanceof Error ? e.message : 'Ошибка загрузки'),
       });
       if (isUnauthorized) {
-        useAuthStore.getState().logout();
+        useAuthStore.setState({ user: null });
       }
       throw e;
     }
@@ -102,14 +102,19 @@ export const useUsersStore = create<UsersState>((set, get) => ({
     set({ selectedIds: allSelected ? [] : allIds });
   },
 
-  removeSelected: () => {
-    const { selectedIds, items } = get();
-    if (selectedIds.length === 0) return;
-    set({
-      items: items.filter((u) => !selectedIds.includes(u.id)),
-      total: get().total - selectedIds.length,
-      selectedIds: [],
-    });
+  removeSelected: async () => {
+    const { selectedIds, limit, page } = get();
+    if (!selectedIds.length) return 0;
+    set({ loading: true, error: null });
+    try {
+      const result = await apiFetch<{ deleted: number; total: number }>('/users', { method: 'DELETE', body: JSON.stringify({ ids: selectedIds }) });
+      set({ selectedIds: [], page: Math.min(page, Math.max(1, Math.ceil(result.total / limit))) });
+      await get().fetchUsers();
+      return result.deleted;
+    } catch (e) {
+      set({ loading: false, error: e instanceof Error ? e.message : 'Ошибка удаления' });
+      throw e;
+    }
   },
 
   clearError: () => set({ error: null }),

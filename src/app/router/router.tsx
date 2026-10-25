@@ -1,11 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from '@/app/layout/Layout';
 import { ProtectedRoute } from '@/app/providers/ProtectedRoute';
 import { GuestOnlyRoute } from '@/app/providers/GuestOnlyRoute';
 import { LoginPage } from '@/pages/login/LoginPage';
-import { DashboardPage } from '@/pages/dashboard/DashboardPage';
-import { UsersTablePage } from '@/pages/users-table/UsersTablePage';
-import { SettingsPage } from '@/pages/settings/SettingsPage';
+const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage })));
+const UsersTablePage = lazy(() => import('@/pages/users-table/UsersTablePage').then((module) => ({ default: module.UsersTablePage })));
+const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })));
 
 export const router = createBrowserRouter([
   {
@@ -24,9 +25,9 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: 'users', element: <UsersTablePage /> },
-      { path: 'settings', element: <SettingsPage /> },
+      { index: true, element: <Suspense fallback={<p role="status">Загрузка…</p>}><DashboardPage /></Suspense> },
+      { path: 'users', element: <Suspense fallback={<p role="status">Загрузка…</p>}><UsersTablePage /></Suspense> },
+      { path: 'settings', element: <Suspense fallback={<p role="status">Загрузка…</p>}><SettingsPage /></Suspense> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

@@ -15,7 +15,7 @@ function wrap(ui: React.ReactElement) {
 }
 
 beforeEach(() => {
-  useAuthStore.getState().logout();
+  useAuthStore.setState({ user: null, initializing: false });
   (global.fetch as jest.Mock).mockReset();
   mockNavigate.mockClear();
 });
@@ -24,7 +24,7 @@ describe('LoginForm', () => {
   it('при успешном ответе сохраняет токен и редиректит на /', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ token: 'fake-token', user: { id: 1, login: 'admin', name: 'Admin', role: 'admin' } }),
+      json: async () => ({ user: { id: 1, login: 'admin', name: 'Admin', role: 'admin' } }),
     });
 
     wrap(<LoginForm />);
@@ -34,7 +34,6 @@ describe('LoginForm', () => {
     await userEvent.click(screen.getByRole('button', { name: /войти/i }));
 
     await waitFor(() => {
-      expect(useAuthStore.getState().token).toBe('fake-token');
       expect(useAuthStore.getState().user?.login).toBe('admin');
     });
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });

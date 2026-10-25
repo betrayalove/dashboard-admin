@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/app/store/auth-store';
 import { Button } from '@/shared/ui/button/Button';
 import { Input } from '@/shared/ui/input/Input';
@@ -10,13 +10,15 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const { login: doLogin, loading, error } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!login.trim() || !password) return;
     try {
       await doLogin(login.trim(), password);
-      navigate('/', { replace: true });
+      const from = location.state?.from;
+      navigate(from ? `${from.pathname}${from.search || ''}${from.hash || ''}` : '/', { replace: true });
     } catch {
       // error set in store
     }

@@ -13,8 +13,8 @@ test.describe('Дашборд', () => {
 
   test('отображаются виджеты с метриками и графики', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Пользователи')).toBeVisible();
-    await expect(page.getByText('Заказы')).toBeVisible();
-    await expect(page.locator('canvas').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Пользователи', { exact: true })).toBeVisible();
+    await expect(page.getByText('Заказы', { exact: true })).toBeVisible();
+    await expect(page.locator('.recharts-surface').first()).toBeVisible({ timeout: 5000 });
   });
 });

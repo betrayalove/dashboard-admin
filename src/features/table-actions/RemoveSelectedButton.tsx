@@ -4,20 +4,22 @@ import { Button } from '@/shared/ui/button/Button';
 import styles from './RemoveSelectedButton.module.css';
 
 export function RemoveSelectedButton() {
-  const { selectedIds, removeSelected } = useUsersStore();
+  const { selectedIds, removeSelected, loading } = useUsersStore();
   const addToast = useToastsStore((s) => s.addToast);
   const count = selectedIds.length;
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (count === 0) return;
-    removeSelected();
-    addToast(`Удалено записей: ${count}`, 'success');
+    try {
+      const deleted = await removeSelected();
+      addToast(`Удалено записей: ${deleted}`, 'success');
+    } catch { addToast('Не удалось удалить записи', 'error'); }
   };
 
   if (count === 0) return null;
 
   return (
-    <Button variant="danger" className={styles.button} onClick={handleClick}>
+    <Button disabled={loading} variant="danger" className={styles.button} onClick={handleClick}>
       Удалить выбранные ({count})
     </Button>
   );

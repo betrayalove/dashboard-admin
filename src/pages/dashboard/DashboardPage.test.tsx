@@ -19,7 +19,7 @@ jest.mock('recharts', () => ({
 }));
 
 beforeEach(() => {
-  useAuthStore.setState({ token: 'fake', user: { id: 1, login: 'admin', name: 'Admin', role: 'admin' } });
+  useAuthStore.setState({ user: { id: 1, login: 'admin', name: 'Admin', role: 'admin' } });
   useDashboardStore.setState({ stats: null, chartData: null });
   (global.fetch as jest.Mock).mockReset();
 });

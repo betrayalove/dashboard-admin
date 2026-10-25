@@ -1,4 +1,6 @@
-let users = [
+import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+const initialUsers = [
   { id: 1, name: 'Алексей Иванов', email: 'alex@example.com', role: 'admin', createdAt: '2024-01-15' },
   { id: 2, name: 'Мария Петрова', email: 'maria@example.com', role: 'user', createdAt: '2024-02-20' },
   { id: 3, name: 'Дмитрий Сидоров', email: 'dmitry@example.com', role: 'editor', createdAt: '2024-03-10' },
@@ -12,6 +14,16 @@ let users = [
   { id: 11, name: 'Виктор Попов', email: 'viktor@example.com', role: 'user', createdAt: '2024-10-01' },
   { id: 12, name: 'Татьяна Михайлова', email: 'tatyana@example.com', role: 'user', createdAt: '2024-11-05' },
 ];
+
+const dataFile = resolve(process.env.DATA_FILE || '.data/users.json');
+let users;
+try {
+  users = JSON.parse(readFileSync(dataFile, 'utf8'));
+  if (!Array.isArray(users) || users.some((u) => !Number.isSafeInteger(u.id) || typeof u.name !== 'string')) throw new Error('Invalid users data');
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+  users = structuredClone(initialUsers);
+}
 
 const SORT_KEYS = ['id', 'name', 'email', 'role', 'createdAt'];
 
@@ -30,6 +42,11 @@ export function getUsers({ page = 1, limit = 10, sort = 'name', order = 'asc' } 
 }
 
 export function deleteUsers(ids) {
-  users = users.filter((u) => !ids.includes(u.id));
-  return users;
+  const remaining = users.filter((u) => !ids.includes(u.id));
+  mkdirSync(dirname(dataFile), { recursive: true });
+  writeFileSync(`${dataFile}.tmp`, JSON.stringify(remaining), { mode: 0o600 });
+  renameSync(`${dataFile}.tmp`, dataFile);
+  const deleted = users.length - remaining.length;
+  users = remaining;
+  return { deleted, total: users.length };
 }

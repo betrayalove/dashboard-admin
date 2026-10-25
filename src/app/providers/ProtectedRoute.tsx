@@ -4,6 +4,8 @@ import { useAuthStore } from '@/app/store/auth-store';
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
+  const initializing = useAuthStore((s) => s.initializing);
+  if (initializing) return <p role="status">Проверка сессии…</p>;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }

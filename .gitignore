@@ -33,3 +33,7 @@ playwright-report
 playwright/.cache
 
 INSTRUCTION*.md
+
+server/.data/
+vite.config.js
+vite.config.d.ts

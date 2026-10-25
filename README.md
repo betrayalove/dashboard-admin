@@ -1,52 +1,49 @@
 # Дашборд / Админ-панель
 
-## Описание
+React 18, TypeScript, Zustand, Recharts, CSS Modules, Vite. Демонстрационный Express backend: cookie-сессия JWT, REST, WebSocket, файловое хранение пользователей. Вход: `admin` / `admin`. Не используйте демо для реальных персональных данных.
 
-SPA: страница логина, дашборд с виджетами и графиками (Recharts), таблица пользователей с сортировкой и пагинацией, страница настроек. Backend на Node.js + Express отдаёт REST API с JWT в httpOnly cookie и WebSocket для обновлений в реальном времени. Демонстрирует Zustand, CSS Modules, FSD, JWT (cookie), WebSocket.
+## Локальный запуск
+
+Используйте Node.js 24 (`nvm use`). Установка обеих частей обязательна:
+
+```sh
+npm ci
+npm ci --prefix server
+cp server/.env.example server/.env
+npm start
+```
+
+Frontend: http://localhost:5173. Backend: http://localhost:3081, WebSocket: `/ws` на том же порту. Vite проксирует `/api` и `/ws`; сторонние cookie не нужны. Сервер сам загружает `server/.env`, Vite — корневой `.env`. В development без JWT_SECRET создаётся случайный ключ процесса; перезапуск завершает сессии. Production требует внешний JWT_SECRET от 32 символов и ALLOWED_ORIGINS.
+
+Для других портов настройте `PORT` сервера и `API_TARGET`/`FRONTEND_PORT` Vite. Данные по умолчанию сохраняются в `server/.data/users.json`; DATA_FILE задаёт другой путь. Удаление действительно меняет этот файл. Вернуть исходные демо-данные можно удалением файла при остановленном сервере.
+
+## Проверки
+
+```sh
+npm run typecheck
+npm test
+npm run test:server
+npm run build
+npx playwright install chromium
+npm run e2e
+```
+
+E2E самостоятельно поднимает backend на 3181 и frontend на 5373, использует отдельный файл данных и останавливает процессы. Переменные BACKEND_PORT/FRONTEND_PORT меняют порты. CI выполняет все проверки на Node 24 и запускает E2E на собранном production frontend. Локально после build можно выполнить `E2E_PREVIEW=1 npm run e2e`. Vite-конфигурация не генерирует JS/d.ts рядом с TS.
 
 ## Возможности
 
-- Вход по логину/паролю (JWT в httpOnly cookie)
-- Дашборд: метрики, линейный и столбчатый графики
-- WebSocket: обновление метрик и уведомления в реальном времени
-- Таблица пользователей: сортировка, пагинация, выбор строк
-- Страница настроек
-- Защищённые и гостевые маршруты
+- Вход/выход с JWT только в httpOnly cookie, восстановление вложенного маршрута при обновлении.
+- REST-метрики и диаграммы, одноразовый WS-ticket на 60 секунд; сообщения `stats-update` и `notification`, переподключение при разрыве.
+- Таблица с сортировкой, пагинацией и серверным удалением; выбор и пагинация обновляются после удаления.
+- Название дашборда, тема и период диаграмм сохраняются и применяются при запуске. Данные диаграмм демонстрационные, период меняет показанный набор.
 
-## Стек
+## Vercel + Render
 
-- **Фронтенд:** React 18, TypeScript, Zustand, CSS Modules, Vite, React Router, Recharts
-- **Бэкенд:** Node.js, Express, JWT, cookie-parser, WebSocket (ws)
-- **Тесты:** Jest, React Testing Library; E2E: Playwright
+1. Подключите репозиторий к Render через `render.yaml`: бесплатный Node web service, root `server`, build `npm ci --omit=dev`, start `npm start`, health `/health`. Blueprint генерирует JWT_SECRET. Задайте ALLOWED_ORIGINS точным production origin Vercel (например `https://dashboard-admin.vercel.app`; несколько значений через запятую).
+2. Подключите тот же репозиторий к Vercel: Node 24, build `npm run build`, output `dist`. Задайте серверный `API_ORIGIN=https://YOUR-SERVICE.onrender.com` и build-переменную `VITE_WS_URL=wss://YOUR-SERVICE.onrender.com/ws`. Пересоберите после смены переменных.
+3. `api/[...path].js` передаёт API через тот же origin Vercel и сохраняет HttpOnly/Secure/SameSite=Lax cookie. Параметр VITE_API_BASE в production оставьте незаданным. WS идёт прямо в Render с коротким одноразовым ticket; JWT сессии никогда не передаётся JavaScript и WS URL.
+4. `vercel.json` настраивает fallback SPA; проверьте прямые `/users`, `/settings`, вход, refresh и обновление WS. Уберите Deployment Protection у публичного production demo в Vercel и используйте production alias, а не защищённый preview URL.
 
-## Переменные окружения
+Бесплатный Render засыпает при простое и теряет файловые изменения при redeploy/restart; поэтому удаление переживает обновление страницы, но не гарантируется между перезапусками хостинга. Постоянное хранение требует внешней БД либо постоянного диска с DATA_FILE на его mount path (платные ресурсы автоматически не создаются). В локальном запуске файл сохраняется между перезапусками.
 
-См. [.env.example](.env.example). Скопируйте в `.env` и при необходимости измените (PORT, WS_PORT, JWT_SECRET).
-
-## Команды
-
-- `npm install` — установка зависимостей
-- `npm run dev` — только фронтенд (Vite, http://localhost:5173)
-- `npm run build` — сборка фронтенда (TypeScript + Vite)
-- `npm run preview` — просмотр собранной сборки
-- `npm run test` — unit-тесты (Jest)
-- `npm run e2e` — E2E (Playwright); перед первым запуском: `npx playwright install`
-- `npm run e2e:ui` — E2E с UI Playwright
-- `npm start` — запуск backend и фронтенда одной командой (concurrently)
-- `npm run server` — только backend (REST + WebSocket)
-
-## Авторизация
-
-JWT хранится в **httpOnly cookie**. При успешном `POST /api/auth/login` сервер устанавливает cookie (`auth_token`) с флагами HttpOnly, SameSite=Strict, Path=/. Фронтенд не пишет токен в localStorage; все REST-запросы с `credentials: 'include'`. Токен в памяти (Zustand) используется только для WebSocket (передача в query, т.к. WS на отдельном порту). Проверка сессии — через `GET /api/auth/me`. Выход — `POST /api/auth/logout` (сброс cookie) и очистка состояния.
-
-## Запуск backend
-
-В корне проекта: `npm run server` (или `npm start` для API + фронт). REST API: http://localhost:3081, WebSocket: ws://localhost:3082. Вход: логин `admin`, пароль `admin`. В папке `server`: `npm run start`.
-
-## Структура проекта
-
-- **src/app** — провайдеры, роутер, хранилища Zustand (auth, users, dashboard, toasts), layout
-- **src/pages** — dashboard, users-table, settings, login
-- **src/features** — auth (форма логина), table-actions, toast
-- **src/shared** — ui (кнопки, инпуты, карточки, скелетон), api (client с credentials), lib (константы), auth (token.ts), styles (tokens.ts)
-- **server** — Node.js + Express: маршруты auth (login, logout, me), dashboard, users; middleware JWT (cookie или Bearer); WebSocket-сервер (ws)
+После push GitHub запускает CI; подключённые Vercel/Render автоматически деплоят main. При необходимости обязательного ожидания CI перед deploy включите в Render “After CI Checks Pass” и используйте защищённую main с required CI check в GitHub; эти настройки аккаунта не хранятся в коде. Секреты в Git не добавляйте.

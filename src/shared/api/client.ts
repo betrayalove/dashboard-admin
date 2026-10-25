@@ -1,20 +1,16 @@
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) || ((typeof import.meta !== 'undefined' && import.meta.env?.DEV) ? 'http://localhost:3081/api' : '/api');
+export const API_BASE = import.meta.env?.VITE_API_BASE || '/api';
 
 export type ApiError = { error: string };
 
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit & { token?: string } = {}
+  options: RequestInit = {}
 ): Promise<T> {
-  const { token, body, ...rest } = options;
+  const { body, ...rest } = options;
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(rest.headers as Record<string, string>),
   };
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
   const fetchOptions: RequestInit = {
     ...rest,
     headers,

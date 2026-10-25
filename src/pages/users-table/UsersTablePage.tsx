@@ -81,13 +81,13 @@ export function UsersTablePage() {
                       <th
                         key={col}
                         className={styles.th}
-                        onClick={() => setSort(col)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && setSort(col)}
+                        scope="col"
+                        aria-sort={sort === col ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
                       >
-                        {LABELS[col]}
-                        {sort === col && <span className={styles.arrow}>{order === 'asc' ? ' ↑' : ' ↓'}</span>}
+                        <button className={styles.sortButton} onClick={() => setSort(col)}>
+                          {LABELS[col]}
+                          {sort === col && <span aria-hidden="true" className={styles.arrow}>{order === 'asc' ? ' ↑' : ' ↓'}</span>}
+                        </button>
                       </th>
                     ))}
                     <th className={styles.th}>Действия</th>

@@ -8,5 +8,6 @@ dashboardRouter.get('/stats', (req, res) => {
 });
 
 dashboardRouter.get('/chart', (req, res) => {
-  res.json(getChartData());
+  if (!['day', 'week', 'month'].includes(req.query.period || 'week')) return res.status(400).json({ error: 'Invalid period' });
+  res.json(getChartData(req.query.period));
 });

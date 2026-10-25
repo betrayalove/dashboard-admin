@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { UsersTablePage } from './UsersTablePage';
@@ -11,7 +11,7 @@ const mockUsers = [
 ];
 
 beforeEach(() => {
-  useAuthStore.setState({ token: 'fake', user: { id: 1, login: 'admin', name: 'Admin', role: 'admin' } });
+  useAuthStore.setState({ user: { id: 1, login: 'admin', name: 'Admin', role: 'admin' } });
   useUsersStore.setState({
     items: [...mockUsers],
     total: 2,
@@ -57,7 +57,9 @@ describe('UsersTablePage', () => {
     const removeBtn = screen.getByRole('button', { name: /удалить выбранные/i });
     expect(removeBtn).toBeInTheDocument();
 
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ deleted: 1, total: 1 }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ items: [mockUsers[1]], total: 1, page: 1, limit: 10, sort: 'name', order: 'asc' }) });
     await userEvent.click(removeBtn);
+    await waitFor(() => expect(useUsersStore.getState().items).toHaveLength(1));
 
     expect(useUsersStore.getState().items).toHaveLength(1);
     expect(useUsersStore.getState().items[0].name).toBe('Bob');

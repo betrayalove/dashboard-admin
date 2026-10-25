@@ -8,7 +8,7 @@ module.exports = {
     '\\.module\\.css$': 'identity-obj-proxy',
   },
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false, tsconfig: { module: 'CommonJS' }, diagnostics: { ignoreCodes: [1343] }, astTransformers: { before: [{ path: 'ts-jest-mock-import-meta', options: { metaObjectReplacement: { env: {} } } }] } }],
   },
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/main.tsx', '!src/vite-env.d.ts'],

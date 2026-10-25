@@ -1,3 +1,4 @@
+import { useSettingsStore } from './settings-store';
 import { create } from 'zustand';
 import { apiFetch } from '@/shared/api/client';
 import { useAuthStore } from './auth-store';
@@ -25,29 +26,25 @@ export interface ChartData {
 interface DashboardState {
   stats: DashboardStats | null;
   chartData: ChartData | null;
-  period: string;
   loading: boolean;
   error: string | null;
   fetchStats: () => Promise<void>;
   fetchChart: () => Promise<void>;
   setStats: (stats: DashboardStats) => void;
-  setPeriod: (period: string) => void;
   clearError: () => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   stats: null,
   chartData: null,
-  period: 'week',
   loading: false,
   error: null,
 
   fetchStats: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!useAuthStore.getState().user) return;
     set({ loading: true, error: null });
     try {
-      const stats = await apiFetch<DashboardStats>('/dashboard/stats', { token });
+      const stats = await apiFetch<DashboardStats>('/dashboard/stats');
       set({ stats, loading: false, error: null });
     } catch (e) {
       const isUnauthorized = e instanceof Error && e.message === 'UNAUTHORIZED';
@@ -56,17 +53,16 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         error: isUnauthorized ? null : (e instanceof Error ? e.message : 'Ошибка загрузки'),
       });
       if (isUnauthorized) {
-        useAuthStore.getState().logout();
+        useAuthStore.setState({ user: null });
       }
       throw e;
     }
   },
 
   fetchChart: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!useAuthStore.getState().user) return;
     try {
-      const chartData = await apiFetch<ChartData>('/dashboard/chart', { token });
+      const chartData = await apiFetch<ChartData>(`/dashboard/chart?period=${useSettingsStore.getState().settings.defaultPeriod}`);
       set({ chartData });
     } catch {
       set({ chartData: null });
@@ -74,8 +70,6 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   setStats: (stats) => set({ stats: stats ?? get().stats }),
-
-  setPeriod: (period) => set({ period }),
 
   clearError: () => set({ error: null }),
 }));

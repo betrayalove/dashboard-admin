@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -15,44 +15,45 @@ import { useToastsStore } from '@/app/store/toasts-store';
 import { Card } from '@/shared/ui/card/Card';
 import { Skeleton } from '@/shared/ui/skeleton/Skeleton';
 import { WS_URL } from '@/shared/lib/constants';
+import { apiFetch } from '@/shared/api/client';
+import { useSettingsStore } from '@/app/store/settings-store';
 import { useAuthStore } from '@/app/store/auth-store';
 import styles from './DashboardPage.module.css';
 
 export function DashboardPage() {
-  const { token } = useAuthStore();
+  const { user } = useAuthStore();
+  const settings = useSettingsStore((s) => s.settings);
   const { stats, chartData, loading, error, fetchStats, fetchChart, setStats } = useDashboardStore();
   const addToast = useToastsStore((s) => s.addToast);
-  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     fetchStats().catch(() => {});
     fetchChart().catch(() => {});
-  }, [fetchStats, fetchChart]);
+  }, [fetchStats, fetchChart, settings.defaultPeriod]);
 
   useEffect(() => {
-    if (!token || !WS_URL) return;
-    const url = `${WS_URL}?token=${encodeURIComponent(token)}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
+    if (!user || !WS_URL) return;
+    let cancelled = false;
+    let ws: WebSocket | undefined;
+    let retry: ReturnType<typeof setTimeout>;
+    const connect = async () => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'stats-update' && data.payload) {
-          setStats(data.payload);
-        }
-        if (data.type === 'notification' && data.message) {
-          addToast(data.message, 'info');
-        }
-      } catch {}
+        const { ticket } = await apiFetch<{ ticket: string }>('/auth/ws-ticket', { method: 'POST' });
+        if (cancelled) return;
+        ws = new WebSocket(`${WS_URL}?ticket=${encodeURIComponent(ticket)}`);
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'stats-update' && data.payload) setStats(data.payload);
+            if (data.type === 'notification' && data.message) addToast(data.message, 'info');
+          } catch { /* Ignore malformed messages. */ }
+        };
+        ws.onclose = () => { if (!cancelled) retry = setTimeout(connect, 5000); };
+      } catch { if (!cancelled) retry = setTimeout(connect, 5000); }
     };
-
-    ws.onerror = () => {};
-    return () => {
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [token, setStats, addToast]);
+    void connect();
+    return () => { cancelled = true; clearTimeout(retry); ws?.close(); };
+  }, [user, setStats, addToast]);
 
   if (error) {
     return (
@@ -75,7 +76,7 @@ export function DashboardPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Дашборд</h1>
+      <h1 className={styles.title}>{settings.dashboardName}</h1>
 
       {loading && !stats ? (
         <div className={styles.widgets}>
@@ -102,7 +103,7 @@ export function DashboardPage() {
 
       {chartData && (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Графики</h2>
+          <h2 className={styles.sectionTitle}>Графики — {{ day: 'день', week: 'неделя', month: 'месяц' }[settings.defaultPeriod]}</h2>
           <div className={styles.charts}>
             <Card title="Линейный график" className={styles.chartCard}>
               <div className={styles.chartWrap}>

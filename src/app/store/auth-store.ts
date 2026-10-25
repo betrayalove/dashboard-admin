@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { apiFetch } from '@/shared/api/client';
-import { logoutApi } from '@/shared/auth/token';
+import { logoutApi, checkAuth } from '@/shared/auth/token';
 
 export interface User {
   id: number;
@@ -10,35 +10,34 @@ export interface User {
 }
 
 interface AuthState {
-  token: string | null;
   user: User | null;
+  initializing: boolean;
   loading: boolean;
   error: string | null;
   login: (login: string, password: string) => Promise<void>;
-  logout: () => void;
-  initFromStorage: () => void;
+  logout: () => Promise<void>;
+  initFromStorage: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
+  initializing: true,
   user: null,
   loading: false,
   error: null,
 
   initFromStorage: async () => {
-    const { checkAuth } = await import('@/shared/auth/token');
     const data = await checkAuth();
-    if (data) set({ token: data.token, user: data.user });
+    set({ user: data?.user || null, initializing: false });
   },
 
   login: async (loginName: string, password: string) => {
     set({ loading: true, error: null });
     try {
-      const data = await apiFetch<{ token: string; user: User }>('/auth/login', {
+      const data = await apiFetch<{ user: User }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ login: loginName, password }),
       });
-      set({ token: data.token, user: data.user, loading: false, error: null });
+      set({ user: data.user, initializing: false, loading: false, error: null });
     } catch (e) {
       set({
         loading: false,
@@ -50,6 +49,6 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     await logoutApi();
-    set({ token: null, user: null });
+    set({ user: null });
   },
 }));

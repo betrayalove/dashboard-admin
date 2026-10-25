@@ -16,7 +16,15 @@ test.describe('Настройки', () => {
     await expect(page).toHaveURL(/\/settings/);
     await expect(page.getByRole('heading', { name: /настройки/i })).toBeVisible();
     await page.getByLabel(/название дашборда/i).fill('Мой дашборд');
+    await page.getByLabel('Период по умолчанию').selectOption('month');
+    await page.getByLabel('Тема', { exact: true }).selectOption('dark');
     await page.getByRole('button', { name: /сохранить/i }).click();
-    await expect(page.getByRole('region', { name: /уведомления/i }).or(page.locator('[role="status"]'))).toContainText(/сохранены/i, { timeout: 3000 });
+    await expect(page.getByRole('region', { name: /уведомления/i })).toContainText(/сохранены/i, { timeout: 3000 });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Мой дашборд' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Графики — месяц' })).toBeVisible();
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.getByRole('heading', { name: 'Мой дашборд' })).toBeVisible();
   });
 });
