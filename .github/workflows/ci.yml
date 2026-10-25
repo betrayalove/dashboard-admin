@@ -18,6 +18,8 @@ jobs:
       - run: npm test
       - run: npm run test:server
       - run: npm run build
+        env:
+          VITE_API_BASE: https://legacy-api.invalid/api
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
         env:

@@ -60,3 +60,31 @@ test('WebSocket принимает сообщение через единый /w
   await page.getByTestId('login-submit').click();
   await expect.poll(() => messages.some((message) => JSON.parse(message).type === 'stats-update')).toBe(true);
 });
+
+test('все REST-запросы используют origin фронтенда даже при legacy VITE_API_BASE', async ({ page, baseURL }) => {
+  const requests: URL[] = [];
+  page.on('request', request => {
+    if (['fetch', 'xhr'].includes(request.resourceType())) requests.push(new URL(request.url()));
+  });
+  await page.goto('/login');
+  await page.getByTestId('login-input').fill('admin');
+  await page.getByTestId('password-input').fill('admin');
+  await page.getByTestId('login-submit').click();
+  await expect(page.getByText('Заказы', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Пользователи', exact: true }).click();
+  await expect(page.getByRole('table')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page).toHaveURL(/\/users$/);
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
+  await expect(page.getByTestId('login-form')).toBeVisible();
+  const paths = requests.map(url => url.pathname);
+  for (const path of ['/api/auth/me', '/api/auth/login', '/api/dashboard/stats', '/api/dashboard/chart', '/api/users', '/api/auth/logout']) {
+    expect(paths).toContain(path);
+  }
+  const frontendOrigin = new URL(baseURL!).origin;
+  for (const request of requests) {
+    expect(request.origin, `REST request ${request.href} must preserve first-party cookies`).toBe(frontendOrigin);
+    expect(request.pathname).toMatch(/^\/api\//);
+  }
+});

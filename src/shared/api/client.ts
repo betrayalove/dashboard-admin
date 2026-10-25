@@ -1,4 +1,5 @@
-export const API_BASE = import.meta.env?.VITE_API_BASE || '/api';
+// Keep session cookies first-party even when an older deployment still defines VITE_API_BASE.
+export const API_BASE = '/api';
 
 export type ApiError = { error: string };
 
