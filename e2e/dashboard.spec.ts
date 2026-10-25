@@ -13,8 +13,17 @@ test.describe('Дашборд', () => {
 
   test('отображаются виджеты с метриками и графики', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Пользователи', { exact: true })).toBeVisible();
-    await expect(page.getByText('Заказы', { exact: true })).toBeVisible();
-    await expect(page.locator('.recharts-surface').first()).toBeVisible({ timeout: 5000 });
+    const main = page.getByRole('main');
+    // The navigation and loaded widget deliberately share a label; wait for the metric itself.
+    await expect(page.getByRole('link', { name: 'Пользователи', exact: true })).toBeVisible();
+    await expect(main.getByText('Пользователи', { exact: true })).toBeVisible();
+    await expect(main.getByText('Заказы', { exact: true })).toBeVisible();
+    await expect(page.getByText('Пользователи', { exact: true })).toHaveCount(2);
+    await expect(main.getByRole('heading', { name: 'Линейный график', exact: true })).toBeVisible();
+    await expect(main.getByRole('heading', { name: 'Столбчатая диаграмма', exact: true })).toBeVisible();
+    const charts = main.locator('.recharts-surface');
+    await expect(charts).toHaveCount(2);
+    await expect(charts.nth(0)).toBeVisible();
+    await expect(charts.nth(1)).toBeVisible();
   });
 });
