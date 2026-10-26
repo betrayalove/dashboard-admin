@@ -34,7 +34,7 @@
 .td {
   padding: var(--space-2) var(--space-3);
   text-align: left;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .th {
@@ -46,7 +46,7 @@
 }
 
 .th:hover {
-  color: var(--color-primary);
+  color: var(--color-link);
 }
 
 .thCheck,
@@ -54,12 +54,12 @@
   width: 48px;
   padding: var(--space-2);
   text-align: center;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .arrow {
   margin-left: 2px;
-  color: var(--color-primary);
+  color: var(--color-link);
 }
 
 .td {
@@ -78,7 +78,7 @@
   justify-content: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-top: 1px solid rgba(100, 116, 139, 0.2);
+  border-top: 1px solid var(--color-border);
   flex-wrap: wrap;
 }
 
@@ -96,9 +96,14 @@
 
 .errorBlock {
   padding: var(--space-3);
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-error);
+  background: var(--color-error-surface);
+  color: var(--color-error-text);
   border-radius: var(--radius-card);
 }
 
 .sortButton { font: inherit; color: inherit; border: 0; background: transparent; padding: 0; cursor: pointer; }
+
+.th { background: var(--color-surface-muted); }
+.table { white-space: nowrap; }
+.table tbody tr:hover { background: var(--color-surface-muted); }
+.table input { accent-color: var(--color-primary); width: 18px; height: 18px; }

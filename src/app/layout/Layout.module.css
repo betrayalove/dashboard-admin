@@ -6,7 +6,8 @@
 
 .main {
   flex: 1;
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-4) var(--page-gutter);
+  min-width: 0;
   max-width: var(--container-max);
   width: 100%;
   margin: 0 auto;

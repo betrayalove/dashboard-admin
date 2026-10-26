@@ -50,8 +50,8 @@
 
 .errorBlock {
   padding: var(--space-3);
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-error);
+  background: var(--color-error-surface);
+  color: var(--color-error-text);
   border-radius: var(--radius-card);
 }
 

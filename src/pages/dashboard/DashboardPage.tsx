@@ -22,6 +22,7 @@ import styles from './DashboardPage.module.css';
 
 export function DashboardPage() {
   const { user } = useAuthStore();
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   const settings = useSettingsStore((s) => s.settings);
   const { stats, chartData, loading, error, fetchStats, fetchChart, setStats } = useDashboardStore();
   const addToast = useToastsStore((s) => s.addToast);
@@ -113,13 +114,16 @@ export function DashboardPage() {
                     <XAxis dataKey="month" stroke="var(--color-text-secondary)" />
                     <YAxis stroke="var(--color-text-secondary)" />
                     <Tooltip
+                      itemStyle={{ color: 'var(--color-text)' }}
+                      labelStyle={{ color: 'var(--color-text)' }}
                       contentStyle={{
                         background: 'var(--color-surface)',
-                        border: '1px solid var(--color-secondary)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
                         borderRadius: 'var(--radius-btn)',
                       }}
                     />
-                    <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={2} />
+                    <Line type="monotone" dataKey="value" stroke="var(--color-link)" strokeWidth={2} isAnimationActive={!reducedMotion} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -132,13 +136,16 @@ export function DashboardPage() {
                     <XAxis dataKey="name" stroke="var(--color-text-secondary)" />
                     <YAxis stroke="var(--color-text-secondary)" />
                     <Tooltip
+                      itemStyle={{ color: 'var(--color-text)' }}
+                      labelStyle={{ color: 'var(--color-text)' }}
                       contentStyle={{
                         background: 'var(--color-surface)',
-                        border: '1px solid var(--color-secondary)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
                         borderRadius: 'var(--radius-btn)',
                       }}
                     />
-                    <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} isAnimationActive={!reducedMotion} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

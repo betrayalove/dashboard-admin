@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/app/store/auth-store';
 import { useToastsStore } from '@/app/store/toasts-store';
 import { Button } from '@/shared/ui/button/Button';
@@ -18,15 +18,9 @@ export function Header() {
     <header className={styles.header}>
       <div className={styles.container}>
         <nav className={styles.nav}>
-          <a href="/" className={styles.link} onClick={(e) => { e.preventDefault(); navigate('/'); }}>
-            Дашборд
-          </a>
-          <a href="/users" className={styles.link} onClick={(e) => { e.preventDefault(); navigate('/users'); }}>
-            Пользователи
-          </a>
-          <a href="/settings" className={styles.link} onClick={(e) => { e.preventDefault(); navigate('/settings'); }}>
-            Настройки
-          </a>
+          <NavLink to="/" end className={styles.link}>Дашборд</NavLink>
+          <NavLink to="/users" className={styles.link}>Пользователи</NavLink>
+          <NavLink to="/settings" className={styles.link}>Настройки</NavLink>
         </nav>
         <div className={styles.user}>
           <span className={styles.userName}>{user?.name ?? user?.login}</span>

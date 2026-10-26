@@ -3,10 +3,10 @@ import styles from './LoginPage.module.css';
 
 export function LoginPage() {
   return (
-    <div className={styles.page}>
+    <main className={styles.page}>
       <div className={styles.card}>
         <LoginForm />
       </div>
-    </div>
+    </main>
   );
 }

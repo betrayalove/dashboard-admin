@@ -20,6 +20,7 @@ Frontend: http://localhost:5173. Backend: http://localhost:3081, WebSocket: `/ws
 ## Проверки
 
 ```sh
+npm run lint
 npm run typecheck
 npm test
 npm run test:server
@@ -47,3 +48,9 @@ E2E самостоятельно поднимает backend на 3181 и fronten
 Бесплатный Render засыпает при простое и теряет файловые изменения при redeploy/restart; поэтому удаление переживает обновление страницы, но не гарантируется между перезапусками хостинга. Постоянное хранение требует внешней БД либо постоянного диска с DATA_FILE на его mount path (платные ресурсы автоматически не создаются). В локальном запуске файл сохраняется между перезапусками.
 
 После push GitHub запускает CI; подключённые Vercel/Render автоматически деплоят main. При необходимости обязательного ожидания CI перед deploy включите в Render “After CI Checks Pass” и используйте защищённую main с required CI check в GitHub; эти настройки аккаунта не хранятся в коде. Секреты в Git не добавляйте.
+
+## Дизайн и визуальные проверки
+
+Light/dark темы используют одинаковые spacing 8/16/24/32/48, Inter 16px/1.6, радиусы карточек 12px и кнопок 8px. Контент ограничен 1280px с отступами 16px на мобильных и 32px на desktop. Цвет ссылок отделён от синего CTA, поля и таблицы используют border/surface своей темы. Графики учитывают `prefers-reduced-motion`.
+
+`E2E_PREVIEW=1 npm run e2e -- e2e/design.spec.ts` проверяет реальные login/error/dashboard/users/settings на 1440px и 390px в обеих темах: overflow, WCAG contrast ≥4.5 для текста и CTA, размеры шрифта/контролов, прокрутку широкой таблицы. PNG и computed JSON сохраняются в ignored `design-audit/`; CI прикладывает их к результатам на 7 дней.

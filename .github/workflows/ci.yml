@@ -14,6 +14,7 @@ jobs:
             server/package-lock.json
       - run: npm ci
       - run: npm ci --prefix server
+      - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:server
@@ -25,7 +26,10 @@ jobs:
         env:
           E2E_PREVIEW: '1'
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: playwright-results
-          path: test-results
+          retention-days: 7
+          path: |
+            test-results
+            design-audit
