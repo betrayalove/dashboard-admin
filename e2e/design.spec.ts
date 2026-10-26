@@ -72,8 +72,29 @@ for (const theme of ['light', 'dark'] as const) {
       const reports = [];
       const capture = async (name: string) => {
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-        await page.evaluate(() => document.fonts.ready);
-        const report = await inspectPage(page);
+        const fonts = await page.evaluate(async () => {
+          const sample = 'Дашборд Dashboard 123';
+          const weights = [400, 500, 600, 700];
+          const loaded = await Promise.all(weights.map(async weight => {
+            const faces = await document.fonts.load(`${weight} 16px "Inter"`, sample);
+            return { weight, count: faces.length, loaded: faces.every(face => face.status === 'loaded' && face.family.replace(/["']/g, '') === 'Inter') };
+          }));
+          await document.fonts.ready;
+          return {
+            loaded,
+            checked: weights.every(weight => document.fonts.check(`${weight} 16px "Inter"`, sample)),
+            resources: performance.getEntriesByType('resource').map(entry => entry.name).filter(url => /\.woff2?(?:[?#]|$)/.test(url)),
+            origin: location.origin,
+          };
+        });
+        expect(fonts.checked).toBe(true);
+        for (const face of fonts.loaded) {
+          expect(face.count, `Inter ${face.weight} must load actual font faces`).toBeGreaterThan(0);
+          expect(face.loaded).toBe(true);
+        }
+        expect(fonts.resources.length).toBeGreaterThan(0);
+        for (const resource of fonts.resources) expect(new URL(resource).origin).toBe(fonts.origin);
+        const report = { ...await inspectPage(page), fonts };
         expect(report.documentWidth, `${name}: document must fit the viewport`).toBeLessThanOrEqual(width);
         expect(report.background).toBe(theme === 'dark' ? 'rgb(2, 6, 23)' : 'rgb(248, 250, 252)');
         expect(report.surface).toBe(theme === 'dark' ? '#0f172a' : '#ffffff');
